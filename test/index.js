@@ -511,6 +511,8 @@ describe ( 'Safex', () => {
       t.false ( safex.validate ( 'foo[]' ) );
       t.false ( safex.validate ( 'foo[1 2]' ) );
 
+      t.false ( safex.validate ( 'eval ( "alert(1)" )' ) );
+
     });
 
   });
