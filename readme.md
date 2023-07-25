@@ -96,7 +96,7 @@ const tokens = safex.tokenize ( '1 + 2' ); // => [{ type: 'number', value: 1 }, 
 
 // Low-level function that checks tokens for validity and returns an AST rather than a list of tokens
 
-const ast = safex.tokenize ( '1 + 2' ) // => { type: 'root', children: [{ type: 'addition', children: [{ type: 'number', value: 1 }, { type: 'number', value: 2 }] }] }
+const ast = safex.parse ( '1 + 2' ) // => { type: 'root', children: [{ type: 'addition', children: [{ type: 'number', value: 1 }, { type: 'number', value: 2 }] }] }
 ```
 
 ## License
