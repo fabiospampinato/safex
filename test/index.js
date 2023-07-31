@@ -140,6 +140,7 @@ describe ( 'Safex', () => {
       t.is ( safex.exec ( '2 ** 3' ), 2 ** 3 );
       t.is ( safex.exec ( '2 ** 3 ** 2' ), 2 ** 3 ** 2 );
       t.is ( safex.exec ( '2 * 3' ), 2 * 3 );
+      t.is ( safex.exec ( '2 * 3 * 10' ), 2 * 3 * 10 );
       t.is ( safex.exec ( '9 / 3' ), 9 / 3 );
       t.is ( safex.exec ( '9 % 4' ), 9 % 4 );
       t.is ( safex.exec ( '2 + 3' ), 2 + 3 );
@@ -248,6 +249,10 @@ describe ( 'Safex', () => {
       t.is ( safex.exec ( '( 1 || null ) ?? 2' ), ( 1 || null ) ?? 2 );
       t.is ( safex.exec ( '( 0 && null ) ?? 2' ), ( 0 && null ) ?? 2 );
       t.is ( safex.exec ( '( 1 && null ) ?? 2' ), ( 1 && null ) ?? 2 );
+      t.is ( safex.exec ( '2 ?? ( 0 || null )' ), 2 ?? ( 0 || null ) );
+      t.is ( safex.exec ( '2 ?? ( 1 || null )' ), 2 ?? ( 1 || null ) );
+      t.is ( safex.exec ( '2 ?? ( 0 && null )' ), 2 ?? ( 0 && null ) );
+      t.is ( safex.exec ( '2 ?? ( 1 && null )' ), 2 ?? ( 1 && null ) );
 
       t.is ( safex.exec ( '( -1 ) ** 2' ), ( -1 ) ** 2 );
       t.is ( safex.exec ( '1 + 2 ** 3 * 4 / 5 >> 6' ), 1 + 2 ** 3 * 4 / 5 >> 6 );
@@ -374,7 +379,11 @@ describe ( 'Safex', () => {
 
     });
 
-    it ( 'throws on actually invalid expressions', t => {
+  });
+
+  describe ( 'validate', it => {
+
+    it ( 'detects actually invalid expressions', t => {
 
       t.false ( safex.validate ( '' ) );
       t.false ( safex.validate ( '\n' ) );
@@ -513,133 +522,19 @@ describe ( 'Safex', () => {
 
       t.false ( safex.validate ( 'eval ( "alert(1)" )' ) );
 
-    });
+      //TODO: Add checks for the following (very) edge cases
 
-  });
+      // t.false ( safex.validate ( '0 || null ?? 2' ) );
+      // t.false ( safex.validate ( '1 || null ?? 2' ) );
+      // t.false ( safex.validate ( '0 && null ?? 2' ) );
+      // t.false ( safex.validate ( '1 && null ?? 2' ) );
 
-  describe ( 'tokenize', it => {
+      // t.false ( safex.validate ( '2 ?? 0 || null' ) );
+      // t.false ( safex.validate ( '2 ?? 1 || null' ) );
+      // t.false ( safex.validate ( '2 ?? 0 && null' ) );
+      // t.false ( safex.validate ( '2 ?? 1 && null' ) );
 
-    it ( 'supports booleans', t => {
-
-      t.deepEqual ( safex.tokenize ( 'true' ), [{ type: 'true' }] );
-      t.deepEqual ( safex.tokenize ( 'false' ), [{ type: 'false' }] );
-
-    });
-
-    it ( 'supports null', t => {
-
-      t.deepEqual ( safex.tokenize ( 'null' ), [{ type: 'null' }] );
-
-    });
-
-    it ( 'supports undefined', t => {
-
-      t.deepEqual ( safex.tokenize ( 'undefined' ), [{ type: 'undefined' }] );
-
-    });
-
-    it ( 'supports bigints', t => {
-
-      t.deepEqual ( safex.tokenize ( '123n' ), [{ type: 'bigint', value: 123n }] );
-      t.deepEqual ( safex.tokenize ( '9007199254740991123n' ), [{ type: 'bigint', value: 9007199254740991123n }] );
-
-    });
-
-    it ( 'supports numbers', t => {
-
-      t.deepEqual ( safex.tokenize ( '123' ), [{ type: 'number', value: 123 }] );
-      t.deepEqual ( safex.tokenize ( '123.123' ), [{ type: 'number', value: 123.123 }] );
-      t.deepEqual ( safex.tokenize ( '123.' ), [{ type: 'number', value: 123. }] );
-      t.deepEqual ( safex.tokenize ( '.123' ), [{ type: 'number', value: .123 }] );
-
-      t.deepEqual ( safex.tokenize ( '123e10' ), [{ type: 'number', value: 123e10 }] );
-      t.deepEqual ( safex.tokenize ( '123.123e-10' ), [{ type: 'number', value: 123.123e-10 }] );
-      t.deepEqual ( safex.tokenize ( '123.E10' ), [{ type: 'number', value: 123.E10 }] );
-      t.deepEqual ( safex.tokenize ( '.123E-10' ), [{ type: 'number', value: .123E-10 }] );
-
-    });
-
-    it ( 'supports strings', t => {
-
-      t.deepEqual ( safex.tokenize ( '\'\'' ), [{ type: 'string', value: '' }] );
-      t.deepEqual ( safex.tokenize ( '\'\\\'\'' ), [{ type: 'string', value: '\'' }] );
-      t.deepEqual ( safex.tokenize ( '\'"foo"\\\\n`bar`\'' ), [{ type: 'string', value: '"foo"\\n`bar`' }] );
-
-      t.deepEqual ( safex.tokenize ( '""' ), [{ type: 'string', value: '' }] );
-      t.deepEqual ( safex.tokenize ( '"\\""' ), [{ type: 'string', value: '"' }] );
-      t.deepEqual ( safex.tokenize ( '"\'foo\'\\\\n`bar`"' ), [{ type: 'string', value: '\'foo\'\\n`bar`' }] );
-
-      t.deepEqual ( safex.tokenize ( '``' ), [{ type: 'string', value: '' }] );
-      t.deepEqual ( safex.tokenize ( '`\\``' ), [{ type: 'string', value: '`' }] );
-      t.deepEqual ( safex.tokenize ( '`\'foo\'\\\\n"bar"`' ), [{ type: 'string', value: '\'foo\'\\n"bar"' }] );
-
-    });
-
-    it ( 'supports variables', t => {
-
-      t.deepEqual ( safex.tokenize ( 'foo' ), [{ type: 'identifier', value: 'foo' }] );
-      t.deepEqual ( safex.tokenize ( 'Foo' ), [{ type: 'identifier', value: 'Foo' }] );
-      t.deepEqual ( safex.tokenize ( 'NaN' ), [{ type: 'identifier', value: 'NaN' }] );
-      t.deepEqual ( safex.tokenize ( 'throw' ), [{ type: 'identifier', value: 'throw' }] );
-      t.deepEqual ( safex.tokenize ( 'eval' ), [{ type: 'identifier', value: 'eval' }] );
-
-      t.deepEqual ( safex.tokenize ( 'foo.bar.baz' ), [{ type: 'identifier', value: 'foo' }, { type: 'property', value: 'bar' }, { type: 'property', value: 'baz' }] );
-
-      t.deepEqual ( safex.tokenize ( 'foo[true]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'true' }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[false]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'false' }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[null]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'null' }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[undefined]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'undefined' }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[123n]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'bigint', value: 123n }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[0]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'number', value: 0 }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo["foo"]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'string', value: 'foo' }, { type: 'accessClose' }] );
-      t.deepEqual ( safex.tokenize ( 'foo[( 1 + 2 )]' ), [{ type: 'identifier', value: 'foo' }, { type: 'accessOpen' }, { type: 'groupOpen' }, { type: 'number', value: 1 }, { type: 'addition' }, { type: 'number', value: 2 }, { type: 'groupClose' }, { type: 'accessClose' }] );
-
-      t.deepEqual ( safex.tokenize ( '( foo || bar ).value' ), [{ type: 'groupOpen' }, { type: 'identifier', value: 'foo' }, { type: 'logicalOr' }, { type: 'identifier', value: 'bar' }, { type: 'groupClose' }, { type: 'property', value: 'value' }] );
-
-    });
-
-    it ( 'supports unary operators', t => {
-
-      t.deepEqual ( safex.tokenize ( '!0' ), [{ type: 'logicalNot' }, { type: 'number', value: 0 }] );
-      t.deepEqual ( safex.tokenize ( '~0' ), [{ type: 'bitwiseNot' }, { type: 'number', value: 0 }] );
-      t.deepEqual ( safex.tokenize ( '+0' ), [{ type: 'plus' }, { type: 'number', value: 0 }] );
-      t.deepEqual ( safex.tokenize ( '-0' ), [{ type: 'negation' }, { type: 'number', value: 0 }] );
-
-    });
-
-    it ( 'supports binary operators', t => {
-
-      t.deepEqual ( safex.tokenize ( '0 ** 1' ), [{ type: 'number', value: 0 }, { type: 'exponentiation' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 * 1' ), [{ type: 'number', value: 0 }, { type: 'multiplication' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 / 1' ), [{ type: 'number', value: 0 }, { type: 'division' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 % 1' ), [{ type: 'number', value: 0 }, { type: 'reminder' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 + 1' ), [{ type: 'number', value: 0 }, { type: 'addition' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 - 1' ), [{ type: 'number', value: 0 }, { type: 'subtraction' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 << 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseLeftShift' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 >> 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseRightShift' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 >>> 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseUnsignedRightShift' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 < 1' ), [{ type: 'number', value: 0 }, { type: 'lessThan' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 <= 1' ), [{ type: 'number', value: 0 }, { type: 'lessThanOrEqual' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 > 1' ), [{ type: 'number', value: 0 }, { type: 'greaterThan' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 >= 1' ), [{ type: 'number', value: 0 }, { type: 'greaterThanOrEqual' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 == 1' ), [{ type: 'number', value: 0 }, { type: 'equality' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 != 1' ), [{ type: 'number', value: 0 }, { type: 'inequality' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 === 1' ), [{ type: 'number', value: 0 }, { type: 'strictEquality' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 !== 1' ), [{ type: 'number', value: 0 }, { type: 'strictInequality' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 & 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseAnd' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 ^ 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseXor' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 | 1' ), [{ type: 'number', value: 0 }, { type: 'bitwiseOr' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 && 1' ), [{ type: 'number', value: 0 }, { type: 'logicalAnd' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 || 1' ), [{ type: 'number', value: 0 }, { type: 'logicalOr' }, { type: 'number', value: 1 }] );
-      t.deepEqual ( safex.tokenize ( '0 ?? 1' ), [{ type: 'number', value: 0 }, { type: 'nullishCoalescing' }, { type: 'number', value: 1 }] );
-
-    });
-
-    it ( 'supports groups', t => {
-
-      t.deepEqual ( safex.tokenize ( '( 1 )' ), [{ type: 'groupOpen' }, { type: 'number', value: 1 }, { type: 'groupClose' }] );
-      t.deepEqual ( safex.tokenize ( '( 1 + 2 )' ), [{ type: 'groupOpen' }, { type: 'number', value: 1 }, { type: 'addition' }, { type: 'number', value: 2 }, { type: 'groupClose' }] );
-      t.deepEqual ( safex.tokenize ( '1 + ( 1 + ( 1 + 1 ) ) + 1' ), [{ type: 'number', value: 1 }, { type: 'addition' }, { type: 'groupOpen' }, { type: 'number', value: 1 }, { type: 'addition' }, { type: 'groupOpen' }, { type: 'number', value: 1 }, { type: 'addition' }, { type: 'number', value: 1 }, { type: 'groupClose' }, { type: 'groupClose' }, { type: 'addition' }, { type: 'number', value: 1 }] );
+      // t.false ( safex.validate ( '-1 ** 2' ) );
 
     });
 

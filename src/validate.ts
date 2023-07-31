@@ -1,26 +1,17 @@
 
 /* IMPORT */
 
-import compile from './compile';
+import {validate} from 'grammex';
+import Grammar from './grammar';
 
 /* MAIN */
 
-const validate = ( expression: string ): boolean => {
+const _validate = ( expression: string ): boolean => {
 
-  try {
-
-    compile ( expression );
-
-    return true;
-
-  } catch {
-
-    return false;
-
-  }
+  return validate ( expression, Grammar );
 
 };
 
 /* EXPORT */
 
-export default validate;
+export default _validate;

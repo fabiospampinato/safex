@@ -6,12 +6,14 @@ import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimi
 import type {NodeVariableIdentifier, NodeVariableAccess} from './types';
 import type {NodeUnaryLogicalNot, NodeUnaryBitwiseNot, NodeUnaryPlus, NodeUnaryNegation} from './types';
 import type {NodeBinaryExponentiation, NodeBinaryMultiplication, NodeBinaryDivision, NodeBinaryReminder, NodeBinaryAddition, NodeBinarySubtraction, NodeBinaryBitwiseLeftShift, NodeBinaryBitwiseRightShift, NodeBinaryBitwiseUnsignedRightShift, NodeBinaryLessThan, NodeBinaryLessThanOrEqual, NodeBinaryGreaterThan, NodeBinaryGreaterThanOrEqual, NodeBinaryEquality, NodeBinaryInequality, NodeBinaryStrictEquality, NodeBinaryStrictInequality, NodeBinaryBitwiseAnd, NodeBinaryBitwiseXor, NodeBinaryBitwiseOr, NodeBinaryLogicalAnd, NodeBinaryLogicalOr, NodeBinaryNullishCoalescing} from './types';
-import type {NodeGroup} from './types';
+import type {NodeRoot, NodeGroup} from './types';
 import type {Context, Node} from './types';
 
 /* CONSTANTS */
 
 const EVALUATORS = {
+  /* ROOT */
+  root: ( node: NodeRoot, context: Context ) => evaluate ( node.children[0], context ),
   /* PRIMITIVE */
   true: ( node: NodePrimitiveTrue, context: Context ) => true,
   false: ( node: NodePrimitiveFalse, context: Context ) => false,
