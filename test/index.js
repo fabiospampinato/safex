@@ -324,13 +324,13 @@ describe ( 'Safex', () => {
       t.deepEqual ( safex.parse ( 'foo' ), { type: 'root', children: [{ type: 'identifier', value: 'foo' }] } );
       t.deepEqual ( safex.parse ( 'Foo' ), { type: 'root', children: [{ type: 'identifier', value: 'Foo' }] } );
 
-      t.deepEqual ( safex.parse ( 'foo.bar.baz' ), { type: 'root', children: [{ type: 'access', children: [{ type: 'access', children: [{ type: 'identifier', value: 'foo' }, 'bar'] }, 'baz'] }] } );
+      t.deepEqual ( safex.parse ( 'foo.bar.baz' ), { type: 'root', children: [{ type: 'memberAccess', children: [{ type: 'memberAccess', children: [{ type: 'identifier', value: 'foo' }, 'bar'] }, 'baz'] }] } );
 
-      t.deepEqual ( safex.parse ( 'foo[0]' ), { type: 'root', children: [{ type: 'access', children: [{ type: 'identifier', value: 'foo' }, { type: 'number', value: 0 }] }] } );
-      t.deepEqual ( safex.parse ( 'foo["foo"]' ), { type: 'root', children: [{ type: 'access', children: [{ type: 'identifier', value: 'foo' }, { type: 'string', value: 'foo' }] }] } );
-      t.deepEqual ( safex.parse ( 'foo[( 1 + 2 )]' ), { type: 'root', children: [{ type: 'access', children: [{ type: 'identifier', value: 'foo' }, { type: 'group', children: [{ type: 'addition', children: [{ type: 'number', value: 1 }, { type: 'number', value: 2 }] }] }] }] } );
+      t.deepEqual ( safex.parse ( 'foo[0]' ), { type: 'root', children: [{ type: 'computedMemberAccess', children: [{ type: 'identifier', value: 'foo' }, { type: 'number', value: 0 }] }] } );
+      t.deepEqual ( safex.parse ( 'foo["foo"]' ), { type: 'root', children: [{ type: 'computedMemberAccess', children: [{ type: 'identifier', value: 'foo' }, { type: 'string', value: 'foo' }] }] } );
+      t.deepEqual ( safex.parse ( 'foo[( 1 + 2 )]' ), { type: 'root', children: [{ type: 'computedMemberAccess', children: [{ type: 'identifier', value: 'foo' }, { type: 'group', children: [{ type: 'addition', children: [{ type: 'number', value: 1 }, { type: 'number', value: 2 }] }] }] }] } );
 
-      t.deepEqual ( safex.parse ( '( foo || bar ).value' ), { type: 'root', children: [{ type: 'access', children: [{ type: 'group', children: [{ type: 'logicalOr', children: [{ type: 'identifier', value: 'foo' }, { type: 'identifier', value: 'bar' }] }] }, 'value'] }] } );
+      t.deepEqual ( safex.parse ( '( foo || bar ).value' ), { type: 'root', children: [{ type: 'memberAccess', children: [{ type: 'group', children: [{ type: 'logicalOr', children: [{ type: 'identifier', value: 'foo' }, { type: 'identifier', value: 'bar' }] }] }, 'value'] }] } );
 
     });
 
@@ -522,7 +522,9 @@ describe ( 'Safex', () => {
 
       t.false ( safex.validate ( 'eval ( "alert(1)" )' ) );
 
-      //TODO: Add checks for the following (very) edge cases
+      //TODO: Add checks for the following (very) edge cases:
+      //TODO: ** doesn't want logicalNot/bitwiseNot/plus/negation to its left
+      //TODO: ?? doesn't want logicalAnd/logicalOr to its left/right
 
       // t.false ( safex.validate ( '0 || null ?? 2' ) );
       // t.false ( safex.validate ( '1 || null ?? 2' ) );

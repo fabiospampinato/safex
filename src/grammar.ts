@@ -2,65 +2,12 @@
 /* IMPORT */
 
 import {grammar} from 'grammex';
-import type {ExplicitRule, CompoundHandler} from 'grammex';
-
-import type {NodeRoot} from './types';
+import type {ExplicitRule} from 'grammex';
+import type {NodeRoot, NodeGroup, NodeIdentifier, NodeOperator} from './types';
 import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString} from './types';
-import type {NodeVariableIdentifier, NodeVariableAccess, NodeVariableProperty, NodeVariableComputedProperty} from './types';
-import type {NodeUnaryLogicalNot, NodeUnaryBitwiseNot, NodeUnaryPlus, NodeUnaryNegation} from './types';
-import type {NodeBinaryExponentiation, NodeBinaryMultiplication, NodeBinaryDivision, NodeBinaryReminder, NodeBinaryAddition, NodeBinarySubtraction, NodeBinaryBitwiseLeftShift, NodeBinaryBitwiseRightShift, NodeBinaryBitwiseUnsignedRightShift, NodeBinaryLessThan, NodeBinaryLessThanOrEqual, NodeBinaryGreaterThan, NodeBinaryGreaterThanOrEqual, NodeBinaryEquality, NodeBinaryInequality, NodeBinaryStrictEquality, NodeBinaryStrictInequality, NodeBinaryBitwiseAnd, NodeBinaryBitwiseXor, NodeBinaryBitwiseOr, NodeBinaryLogicalAnd, NodeBinaryLogicalOr, NodeBinaryNullishCoalescing} from './types';
-import type {NodePrimitive, NodeVariable, NodeUnary, NodeBinary, NodeGroupOpen, NodeGroupClose, NodeGroup, Node} from './types';
-
-// const IDENTIFIER_FORBIDDEN = new Set ([ 'break', 'case', 'catch', 'class', 'const', 'continue', 'debugger', 'default', 'delete', 'do', 'eval', 'else', 'enum', 'export', 'extends', 'finally', 'for', 'function', 'if', 'implements', 'import', 'in', 'instanceof', 'interface', 'let', 'new', 'package', 'private', 'protected', 'public', 'return', 'static', 'super', 'switch', 'this', 'throw', 'try', 'typeof', 'var', 'void', 'while', 'with', 'yield' ]);
-
-/* HELPERS */
-
-const uni_operator2type = {
-  '!': 'logicalNot',
-  '~': 'bitwiseNot',
-  '+': 'plus',
-  '-': 'negation'
-};
-
-const bi_operator2type = {
-  '**': 'exponentiation',
-  '*': 'multiplication',
-  '/': 'division',
-  '%': 'reminder',
-  '+': 'addition',
-  '-': 'subtraction',
-  '<<': 'bitwiseLeftShift',
-  '>>': 'bitwiseRightShift',
-  '>>>': 'bitwiseUnsignedRightShift',
-  '<': 'lessThan',
-  '<=': 'lessThanOrEqual',
-  '>': 'greaterThan',
-  '>=': 'greaterThanOrEqual',
-  '==': 'equality',
-  '!=': 'inequality',
-  '===': 'strictEquality',
-  '!==': 'strictInequality',
-  '&': 'bitwiseAnd',
-  '^': 'bitwiseXor',
-  '|': 'bitwiseOr',
-  '&&': 'logicalAnd',
-  '||': 'logicalOr',
-  '??': 'nullishCoalescing'
-};
-
-const bi_rtl = {
-  '**': true
-};
-
-const forbiddens_rtl = {
-  '**': new Set ([ 'logicalNot', 'bitwiseNot', 'plus', 'negation' ])
-};
-
-const forbiddens_ltr = {
-  '??': new Set ([ 'logicalAnd', 'logicalOr' ])
-};
-
-const identity = x => x;
+import type {NodeMemberAccessor, NodeComputedMemberAccessor} from './types';
+import type {NodeUnary, NodeBinary} from './types';
+import type {Node} from './types';
 
 /* MAIN */
 
@@ -68,52 +15,122 @@ const identity = x => x;
 //TODO: Support the comma operator
 //TODO: Support the ternary operator
 
-const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, optional, star, plus, and, or }) => {
+const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or }) => {
 
-  const op_unary = ( operator: RegExp, next: ExplicitRule<Node> ): ExplicitRule<Node> => {
-      return or ([ plus ( and ([ _, plus ([ match ( operator, identity ), _ ]), next ]) ), next], nodes => {
-      while ( nodes.length > 1 ) {
-        const operand = nodes.pop ();
-        const operator = nodes.pop ();
-        const type = uni_operator2type[operator];
-        const children = [operand];
-        const node = { type, children };
-        nodes.push ( node );
+  /* CONSTANTS */
+
+  const UNARY_OPERATOR_TO_TYPE: Record<string, NodeUnary['type']> = {
+    '!': 'logicalNot',
+    '~': 'bitwiseNot',
+    '+': 'plus',
+    '-': 'negation'
+  };
+
+  const BINARY_OPERATOR_TO_TYPE: Record<string, NodeBinary['type']> = {
+    '**': 'exponentiation',
+    '*': 'multiplication',
+    '/': 'division',
+    '%': 'reminder',
+    '+': 'addition',
+    '-': 'subtraction',
+    '<<': 'bitwiseLeftShift',
+    '>>': 'bitwiseRightShift',
+    '>>>': 'bitwiseUnsignedRightShift',
+    '<': 'lessThan',
+    '<=': 'lessThanOrEqual',
+    '>': 'greaterThan',
+    '>=': 'greaterThanOrEqual',
+    '==': 'equality',
+    '!=': 'inequality',
+    '===': 'strictEquality',
+    '!==': 'strictInequality',
+    '&': 'bitwiseAnd',
+    '^': 'bitwiseXor',
+    '|': 'bitwiseOr',
+    '&&': 'logicalAnd',
+    '||': 'logicalOr',
+    '??': 'nullishCoalescing'
+  };
+
+  /* HELPERS */
+
+  function collapse ( nodes: Node[], ltr: boolean, take: 1, handler: ( n0: Node, n1: Node ) => Node ): Node;
+  function collapse ( nodes: Node[], ltr: boolean, take: 2, handler: ( n0: Node, n1: Node, n2: Node ) => Node ): Node;
+  function collapse ( nodes: Node[], ltr: boolean, take: 1 | 2, handler: (( n0: Node, n1: Node ) => Node) | (( n0: Node, n1: Node, n2: Node ) => Node) ): Node {
+    if ( nodes.length < 2 ) return nodes[0];
+    if ( ltr ) {
+      let current = nodes[0];
+      for ( let i = 1, l = nodes.length; i < l; i += take ) {
+        const one = nodes[i];
+        const two = nodes[i + 1];
+        current = handler ( current, one, two );
       }
-      return nodes[0];
+      return current;
+    } else {
+      let current = nodes[nodes.length - 1];
+      for ( let i = nodes.length - 2; i >= 0; i -= take ) {
+        const one = nodes[i];
+        const two = nodes[i - 1];
+        current = handler ( current, one, two );
+      }
+      return current;
+    }
+  };
+
+  const is = <T extends Node> ( node: Node | undefined, type: string ): node is T => {
+    return ( node?.type === type );
+  };
+
+  const whitespaced = ( rule: ExplicitRule<Node> ): ExplicitRule<Node> => {
+    return and ([ _, rule, _ ]);
+  };
+
+  const op = ( operator: RegExp ): ExplicitRule<Node> => {
+    return whitespaced ( match ( operator, ( value ): NodeOperator => ({ type: 'operator', value }) ) );
+  };
+
+  const unary = ( operator: RegExp, next: ExplicitRule<Node> ): ExplicitRule<Node> => {
+    return and ([ star ( op ( operator ) ), next], nodes => {
+      return collapse ( nodes, false, 1, ( n0, n1 ) => {
+        if ( !is<NodeOperator> ( n1, 'operator' ) ) throw new Error ( 'Failed to parse' );
+        const type = UNARY_OPERATOR_TO_TYPE[n1.value];
+        return { type, children: [n0] };
+      });
     });
   };
 
-  const op_binary = ( operator: RegExp, next: ExplicitRule<Node> ): ExplicitRule<Node> => {
-    return and ([ next, star ( and ([ _, match ( operator, identity ), _, next ]) ) ], nodes => {
-      if ( nodes[1] in bi_rtl ) {
-        while ( nodes.length > 1 ) {
-          const second = nodes.pop ();
-          const operator = nodes.pop ();
-          const first = nodes.pop ();
-          const type = bi_operator2type[operator];
-          const children = [first, second];
-          const node = { type, children };
-          nodes.push ( node );
-        }
-      } else {
-        while ( nodes.length > 1 ) {
-          const first = nodes.shift ();
-          const operator = nodes.shift ();
-          const second = nodes.shift ();
-          const type = bi_operator2type[operator];
-          const children = [first, second];
-          const node = { type, children };
-          nodes.unshift ( node );
-        }
-      }
-      return nodes[0];
+  const binary = ( operator: RegExp, next: ExplicitRule<Node>, ltr: boolean = true ): ExplicitRule<Node> => {
+    return and ([ next, star ( and ([ op ( operator ), next ]) ) ], nodes => {
+      return collapse ( nodes, ltr, 2, ( n0, n1, n2 ) => {
+        if ( !is<NodeOperator> ( n1, 'operator' ) ) throw new Error ( 'Failed to parse' );
+        const type = BINARY_OPERATOR_TO_TYPE[n1.value];
+        return { type, children: ltr ? [n0, n2] : [n2, n0] };
+      });
     });
   };
 
-  /* EXTRAS */
+  const access = ( next: ExplicitRule<Node> ): ExplicitRule<Node> => {
+    return and ( [next, star ( and ([ _, or ([ MemberAccessor, ComputedMemberAccessor ]) ]) )], ( nodes ): Node => {
+      return collapse ( nodes, true, 1, ( n0, n1 ) => {
+        if ( is<NodeMemberAccessor> ( n1, 'memberAccessor' ) ) {
+          return { type: 'memberAccess', children: [n0, n1.value] };
+        } else if ( is<NodeComputedMemberAccessor> ( n1, 'computedMemberAccessor' ) ) {
+          return { type: 'computedMemberAccess', children: [n0, n1.children[0]] };
+        } else {
+          throw new Error ( 'Failed to parse' );
+        }
+      });
+    });
+  };
+
+  /* WHITESPACE */
 
   const _ = match ( /[ \t]*/ );
+  // const _ = match ( [' ', '\t'] ); //TODO
+
+  /* IDENTIFIER */
+
+  const Identifier = match ( /(?!(?:break|case|catch|class|const|continue|debugger|default|delete|do|eval|else|enum|export|extends|finally|for|function|if|implements|import|in|instanceof|interface|let|new|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield)(?!\w))[a-zA-Z$_][a-zA-Z0-9$_]*/, ( _ ): NodeIdentifier => ({ type: 'identifier', value: _ }) );
 
   /* PRIMITIVES */
 
@@ -134,53 +151,42 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, optional, star
 
   /* GROUP */
 
-  const Group = and ( ['(', () => Value, ')' ], ( nodes ): NodeGroup => ({ type: 'group', children: [nodes[0]] }) );
-
-  /* VARIABLE */
-
-  const VariableIdentifier = match ( /(?!(?:break|case|catch|class|const|continue|debugger|default|delete|do|eval|else|enum|export|extends|finally|for|function|if|implements|import|in|instanceof|interface|let|new|package|private|protected|public|return|static|super|switch|this|throw|try|typeof|var|void|while|with|yield)(?!\w))[a-zA-Z$_][a-zA-Z0-9$_]*/, ( _ ): NodeVariableIdentifier => ({ type: 'identifier', value: _ }) );
+  const Group = and ( ['(', () => Expression, ')' ], ( nodes ): NodeGroup => ({ type: 'group', children: [nodes[0]] }) );
 
   /* PRIMARY */
 
-  const Primary = or ([ Group, Primitive, VariableIdentifier ]);
+  const Primary = or ([ Group, Primitive, Identifier ]);
 
   /* ACCESS */
 
-  const VariableMemberAccess = match ( /\.([a-zA-Z$_][a-zA-Z0-9$_]*)/, ( _, value ) => ({ type: 'memberAccess', children: [value] }) );
-  const VariableComputedMemberAccess = and ( ['[', _, () => Value, _, ']'], ( nodes ) => ({ type: 'computedMemberAccess', children: [nodes[0]] }) );
+  const MemberAccessor = match ( /\.([a-zA-Z$_][a-zA-Z0-9$_]*)/, ( _, value ): NodeMemberAccessor => ({ type: 'memberAccessor', value }) );
+  const ComputedMemberAccessor = and ( ['[', () => Expression, ']'], ( nodes ): NodeComputedMemberAccessor => ({ type: 'computedMemberAccessor', children: [nodes[0]] }) );
+  const Access = access ( Primary );
 
-  const VariableAccess = and ( [Primary, star ( and ([ _, or ([ VariableMemberAccess, VariableComputedMemberAccess ]) ]) )], ( nodes ): NodeVariableAccess => {
-    while ( nodes.length > 1 ) {
-      const first = nodes.shift ();
-      const second = nodes.shift ();
-      const access: NodeVariableAccess = { type: 'access', children: [first, second.children[0]] }
-      nodes.unshift ( access );
-    }
-    return nodes[0];
-  });
+  /* OPERATORS */
 
-  /* BINARY */
+  // Operator precedence: https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#table
 
-  // https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Operators/Operator_precedence#table
-  // Op18 grouping
-  // Op17 member access, computed member access
-  const Op14 = op_unary ( /!|~|\+(?!\+)|-(?!\-)/, VariableAccess );
-  const Op13 = op_binary ( /\*\*/, Op14 );
-  const Op12 = op_binary ( /\*|\/|%/, Op13 );
-  const Op11 = op_binary ( /\+(?!\+)|-(?!\-)/, Op12 );
-  const Op10 = op_binary ( /<<|>>>|>>/, Op11 );
-  const Op9 = op_binary ( /<=|<|>=|>/, Op10 );
-  const Op8 = op_binary ( /===|==|!==|!=/, Op9 );
-  const Op7 = op_binary ( /&/, Op8 );
-  const Op6 = op_binary ( /\^/, Op7 );
-  const Op5 = op_binary ( /\|/, Op6 );
-  const Op4 = op_binary ( /&&/, Op5 );
-  const Op3 = op_binary ( /\|\||\?\?/, Op4 );
+  const Op14 = unary ( /!|~|\+(?!\+)|-(?!-)/, Access );
+  const Op13 = binary ( /\*\*/, Op14, false );
+  const Op12 = binary ( /\*|\/|%/, Op13 );
+  const Op11 = binary ( /\+(?!\+)|-(?!-)/, Op12 );
+  const Op10 = binary ( /<<|>>>|>>/, Op11 );
+  const Op9 = binary ( /<=|<|>=|>/, Op10 );
+  const Op8 = binary ( /===|==|!==|!=/, Op9 );
+  const Op7 = binary ( /&/, Op8 );
+  const Op6 = binary ( /\^/, Op7 );
+  const Op5 = binary ( /\|/, Op6 );
+  const Op4 = binary ( /&&/, Op5 );
+  const Op3 = binary ( /\|\||\?\?/, Op4 );
 
-  /* MAIN */
+  /* EXPRESSION */
 
-  const Value = and ([ _, Op3, _ ]);
-  const Root = and ( [Value], ( nodes ): NodeRoot => ({ type: 'root', children: [nodes[0]] }) );
+  const Expression = whitespaced ( Op3 );
+
+  /* ROOT */
+
+  const Root = and ( [Expression], ( nodes ): NodeRoot => ({ type: 'root', children: [nodes[0]] }) );
 
   return Root;
 

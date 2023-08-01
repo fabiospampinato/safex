@@ -2,19 +2,27 @@
 /* IMPORT */
 
 import parse from './parse';
+import type {Context} from './types';
+import type {NodeRoot, NodeGroup, NodeIdentifier} from './types';
 import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString} from './types';
-import type {NodeVariableIdentifier, NodeVariableAccess} from './types';
+import type {NodeMemberAccess, NodeComputedMemberAccess} from './types';
 import type {NodeUnaryLogicalNot, NodeUnaryBitwiseNot, NodeUnaryPlus, NodeUnaryNegation} from './types';
 import type {NodeBinaryExponentiation, NodeBinaryMultiplication, NodeBinaryDivision, NodeBinaryReminder, NodeBinaryAddition, NodeBinarySubtraction, NodeBinaryBitwiseLeftShift, NodeBinaryBitwiseRightShift, NodeBinaryBitwiseUnsignedRightShift, NodeBinaryLessThan, NodeBinaryLessThanOrEqual, NodeBinaryGreaterThan, NodeBinaryGreaterThanOrEqual, NodeBinaryEquality, NodeBinaryInequality, NodeBinaryStrictEquality, NodeBinaryStrictInequality, NodeBinaryBitwiseAnd, NodeBinaryBitwiseXor, NodeBinaryBitwiseOr, NodeBinaryLogicalAnd, NodeBinaryLogicalOr, NodeBinaryNullishCoalescing} from './types';
-import type {NodeRoot, NodeGroup} from './types';
-import type {Context, Node} from './types';
+import type {Node} from './types';
 
 /* CONSTANTS */
 
 const EVALUATORS = {
   /* ROOT */
   root: ( node: NodeRoot, context: Context ) => evaluate ( node.children[0], context ),
-  /* PRIMITIVE */
+  /* GROUP */
+  group: ( node: NodeGroup, context: Context ) => evaluate ( node.children[0], context ),
+  /* IDENTIFIER */
+  identifier: ( node: NodeIdentifier, context: Context ) => Object.prototype.hasOwnProperty.call ( context, node.value ) ? context[node.value] : undefined,
+  /* ACCESS */
+  memberAccess: ( node: NodeMemberAccess, context: Context ) => evaluate ( node.children[0], context )[node.children[1]],
+  computedMemberAccess: ( node: NodeComputedMemberAccess, context: Context ) => evaluate ( node.children[0], context )[evaluate ( node.children[1], context )],
+  /* PRIMITIVES */
   true: ( node: NodePrimitiveTrue, context: Context ) => true,
   false: ( node: NodePrimitiveFalse, context: Context ) => false,
   null: ( node: NodePrimitiveNull, context: Context ) => null,
@@ -22,18 +30,11 @@ const EVALUATORS = {
   bigint: ( node: NodePrimitiveBigInt, context: Context ) => node.value,
   number: ( node: NodePrimitiveNumber, context: Context ) => node.value,
   string: ( node: NodePrimitiveString, context: Context ) => node.value,
-  /* VARIABLE */
-  identifier: ( node: NodeVariableIdentifier, context: Context ) => Object.prototype.hasOwnProperty.call ( context, node.value ) ? context[node.value] : undefined,
-  access: ( node: NodeVariableAccess, context: Context ) => evaluate ( node.children[0], context )[typeof node.children[1] === 'string' ? node.children[1] : evaluate ( node.children[1], context )], //UGLY
-  property: undefined,
-  computedProperty: undefined,
   /* UNARY */
   logicalNot: ( node: NodeUnaryLogicalNot, context: Context ) => !evaluate ( node.children[0], context ),
   bitwiseNot: ( node: NodeUnaryBitwiseNot, context: Context ) => ~evaluate ( node.children[0], context ),
   plus: ( node: NodeUnaryPlus, context: Context ) => +evaluate ( node.children[0], context ),
   negation: ( node: NodeUnaryNegation, context: Context ) => -evaluate ( node.children[0], context ),
-  decrement: undefined,
-  increment: undefined,
   /* BINARY */
   exponentiation: ( node: NodeBinaryExponentiation, context: Context ) => evaluate ( node.children[0], context ) ** evaluate ( node.children[1], context ),
   multiplication: ( node: NodeBinaryMultiplication, context: Context ) => evaluate ( node.children[0], context ) * evaluate ( node.children[1], context ),
@@ -57,9 +58,7 @@ const EVALUATORS = {
   bitwiseOr: ( node: NodeBinaryBitwiseOr, context: Context ) => evaluate ( node.children[0], context ) | evaluate ( node.children[1], context ),
   logicalAnd: ( node: NodeBinaryLogicalAnd, context: Context ) => evaluate ( node.children[0], context ) && evaluate ( node.children[1], context ),
   logicalOr: ( node: NodeBinaryLogicalOr, context: Context ) => evaluate ( node.children[0], context ) || evaluate ( node.children[1], context ),
-  nullishCoalescing: ( node: NodeBinaryNullishCoalescing, context: Context ) => evaluate ( node.children[0], context ) ?? evaluate ( node.children[1], context ),
-  /* GROUP */
-  group: ( node: NodeGroup, context: Context ) => evaluate ( node.children[0], context )
+  nullishCoalescing: ( node: NodeBinaryNullishCoalescing, context: Context ) => evaluate ( node.children[0], context ) ?? evaluate ( node.children[1], context )
 };
 
 /* HELPERS */
@@ -70,7 +69,7 @@ const evaluate = ( node: Node, context: Context ): any => {
 
   if ( evaluator ) {
 
-    return evaluator ( node as any, context ); //TSC
+    return evaluator ( node, context );
 
   } else {
 
@@ -98,4 +97,3 @@ const compile = ( expression: string ): (( context?: Context ) => unknown) => {
 /* EXPORT */
 
 export default compile;
-export {EVALUATORS};

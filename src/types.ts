@@ -6,6 +6,9 @@ type Context = Record<string, unknown>;
 /* NODES */
 
 type NodeRoot = { type: 'root', children: [Node] };
+type NodeGroup = { type: 'group', children: [Node] };
+type NodeIdentifier = { type: 'identifier', value: string };
+type NodeOperator = { type: 'operator', value: string };
 
 type NodePrimitiveTrue = { type: 'true' };
 type NodePrimitiveFalse = { type: 'false' };
@@ -15,10 +18,10 @@ type NodePrimitiveBigInt = { type: 'bigint', value: bigint };
 type NodePrimitiveNumber = { type: 'number', value: number };
 type NodePrimitiveString = { type: 'string', value: string };
 
-type NodeVariableIdentifier = { type: 'identifier', value: string };
-type NodeVariableAccess = { type: 'access', children: [Node, Node | string] };
-type NodeVariableProperty = { type: 'property', value: string };
-type NodeVariableComputedProperty = { type: 'computedProperty', children: [Node] };
+type NodeMemberAccessor = { type: 'memberAccessor', value: string };
+type NodeMemberAccess = { type: 'memberAccess', children: [Node, string] };
+type NodeComputedMemberAccessor = { type: 'computedMemberAccessor', children: [Node] };
+type NodeComputedMemberAccess = { type: 'computedMemberAccess', children: [Node, Node] };
 
 type NodeUnaryLogicalNot = { type: 'logicalNot', children: [Node] };
 type NodeUnaryBitwiseNot = { type: 'bitwiseNot', children: [Node] };
@@ -49,23 +52,23 @@ type NodeBinaryLogicalAnd = { type: 'logicalAnd', children: [Node, Node] };
 type NodeBinaryLogicalOr = { type: 'logicalOr', children: [Node, Node] };
 type NodeBinaryNullishCoalescing = { type: 'nullishCoalescing', children: [Node, Node] };
 
-type NodeGroupOpen = { type: 'groupOpen' };
-type NodeGroupClose = { type: 'groupClose' };
-type NodeGroup = { type: 'group', children: [Node] };
-
 type NodePrimitive = NodePrimitiveTrue | NodePrimitiveFalse | NodePrimitiveNull | NodePrimitiveUndefined | NodePrimitiveBigInt | NodePrimitiveNumber | NodePrimitiveString;
-type NodeVariable = NodeVariableIdentifier | NodeVariableAccess | NodeVariableProperty | NodeVariableComputedProperty;
+type NodeAccess = NodeMemberAccessor | NodeMemberAccess | NodeComputedMemberAccess | NodeComputedMemberAccessor;
 type NodeUnary = NodeUnaryLogicalNot | NodeUnaryBitwiseNot | NodeUnaryPlus | NodeUnaryNegation;
 type NodeBinary = NodeBinaryExponentiation | NodeBinaryMultiplication | NodeBinaryDivision | NodeBinaryReminder | NodeBinaryAddition | NodeBinarySubtraction | NodeBinaryBitwiseLeftShift | NodeBinaryBitwiseRightShift | NodeBinaryBitwiseUnsignedRightShift | NodeBinaryLessThan | NodeBinaryLessThanOrEqual | NodeBinaryGreaterThan | NodeBinaryGreaterThanOrEqual | NodeBinaryEquality | NodeBinaryInequality | NodeBinaryStrictEquality | NodeBinaryStrictInequality | NodeBinaryBitwiseAnd | NodeBinaryBitwiseXor | NodeBinaryBitwiseOr | NodeBinaryLogicalAnd | NodeBinaryLogicalOr | NodeBinaryNullishCoalescing;
-type Node = NodeRoot | NodePrimitive | NodeVariable | NodeUnary | NodeBinary | NodeGroupOpen | NodeGroupClose | NodeGroup;
+
+type NodeExternal = NodeRoot | NodeGroup | NodeIdentifier | NodePrimitive | NodeMemberAccess | NodeComputedMemberAccess | NodeUnary | NodeBinary;
+type NodeInterval = NodeOperator | NodeMemberAccessor | NodeComputedMemberAccessor;
+type Node = NodeExternal | NodeInterval;
 
 /* EXPORT */
 
 export type {Context};
 
-export type {NodeRoot};
+export type {NodeRoot, NodeGroup, NodeIdentifier, NodeOperator};
 export type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString};
-export type {NodeVariableIdentifier, NodeVariableAccess, NodeVariableProperty, NodeVariableComputedProperty};
+export type {NodeMemberAccessor, NodeMemberAccess, NodeComputedMemberAccessor, NodeComputedMemberAccess};
 export type {NodeUnaryLogicalNot, NodeUnaryBitwiseNot, NodeUnaryPlus, NodeUnaryNegation};
 export type {NodeBinaryExponentiation, NodeBinaryMultiplication, NodeBinaryDivision, NodeBinaryReminder, NodeBinaryAddition, NodeBinarySubtraction, NodeBinaryBitwiseLeftShift, NodeBinaryBitwiseRightShift, NodeBinaryBitwiseUnsignedRightShift, NodeBinaryLessThan, NodeBinaryLessThanOrEqual, NodeBinaryGreaterThan, NodeBinaryGreaterThanOrEqual, NodeBinaryEquality, NodeBinaryInequality, NodeBinaryStrictEquality, NodeBinaryStrictInequality, NodeBinaryBitwiseAnd, NodeBinaryBitwiseXor, NodeBinaryBitwiseOr, NodeBinaryLogicalAnd, NodeBinaryLogicalOr, NodeBinaryNullishCoalescing};
-export type {NodePrimitive, NodeVariable, NodeUnary, NodeBinary, NodeGroupOpen, NodeGroupClose, NodeGroup, Node};
+export type {NodePrimitive, NodeAccess, NodeUnary, NodeBinary};
+export type {NodeExternal, NodeInterval, Node};
