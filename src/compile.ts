@@ -2,6 +2,7 @@
 /* IMPORT */
 
 import parse from './parse';
+import {hasOwn, isFunction, isString} from './utils';
 import type {Context} from './types';
 import type {NodeRoot, NodeGroup, NodeIdentifier} from './types';
 import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString} from './types';
@@ -18,7 +19,7 @@ const EVALUATORS = {
   /* GROUP */
   group: ( node: NodeGroup, context: Context ) => evaluate ( node.children[0], context ),
   /* IDENTIFIER */
-  identifier: ( node: NodeIdentifier, context: Context ) => Object.prototype.hasOwnProperty.call ( context, node.value ) ? context[node.value] : undefined,
+  identifier: ( node: NodeIdentifier, context: Context ) => hasOwn ( context, node.value ) ? context[node.value] : undefined,
   /* ACCESS */
   memberCall: ( node: NodeMemberCall, context: Context ) => checkCallable ( evaluate ( node.children[0], context ), context )( ...node.children[1].map ( child => evaluate ( child, context ) ) ),
   memberAccess: ( node: NodeMemberAccess, context: Context ) => evaluate ( node.children[0], context )[node.children[1]],
@@ -66,7 +67,7 @@ const EVALUATORS = {
 
 const checkCallable = ( fn: unknown, context: Context ): Function => {
 
-  if ( typeof fn === 'function' ) { //TODO: Maybe optimize this check, it's tricky/sketchy though if the object could be mutated
+  if ( isFunction ( fn ) ) { //TODO: Maybe optimize this check, it's tricky/sketchy though if the object could be mutated
 
     for ( const key in context ) {
 
@@ -98,10 +99,9 @@ const evaluate = ( node: Node, context: Context ): any => {
 
 /* MAIN */
 
-const compile = ( expression: string ): (( context?: Context ) => unknown) => {
+const compile = ( expression: Node | string ): (( context?: Context ) => unknown) => {
 
-  const root = parse ( expression );
-  const node = root.children[0];
+  const node = isString ( expression ) ? parse ( expression ).children[0] : expression;
 
   return ( context: Context = {} ): unknown => {
 

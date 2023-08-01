@@ -8,6 +8,19 @@ import safex from '../dist/index.js';
 
 describe ( 'Safex', () => {
 
+  describe ( 'compile', it => {
+
+    it ( 'can compile from a pre-parsed expressoin', t => {
+
+      const ast = safex.parse ( '123' );
+      const compiled = safex.compile ( ast );
+
+      t.is ( compiled (), 123 );
+
+    });
+
+  });
+
   describe ( 'exec', it => {
 
     it ( 'supports booleans', t => {
