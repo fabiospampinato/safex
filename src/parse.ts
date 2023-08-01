@@ -9,7 +9,7 @@ import type {NodeRoot} from './types';
 
 const _parse = ( expression: string ): NodeRoot => {
 
-  return parse ( expression, Grammar )[0];
+  return parse ( expression, Grammar, { memoization: false } )[0];
 
 };
 

@@ -8,7 +8,7 @@ import Grammar from './grammar';
 
 const _validate = ( expression: string ): boolean => {
 
-  return validate ( expression, Grammar );
+  return validate ( expression, Grammar, { memoization: false } );
 
 };
 
