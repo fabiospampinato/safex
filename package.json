@@ -2,7 +2,7 @@
   "name": "safex",
   "repository": "github:fabiospampinato/safex",
   "description": "A language for writing safe expressions, in a tiny subset of JavaScript.",
-  "version": "1.0.0",
+  "version": "2.0.0",
   "type": "module",
   "main": "dist/index.js",
   "exports": "./dist/index.js",
