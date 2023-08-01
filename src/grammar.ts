@@ -5,7 +5,7 @@ import {grammar} from 'grammex';
 import type {ExplicitRule} from 'grammex';
 import type {NodeRoot, NodeGroup, NodeIdentifier, NodeOperator} from './types';
 import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString} from './types';
-import type {NodeMemberAccessor, NodeComputedMemberAccessor} from './types';
+import type {NodeMemberCaller, NodeMemberAccessor, NodeComputedMemberAccessor} from './types';
 import type {NodeUnary, NodeBinary} from './types';
 import type {Node} from './types';
 
@@ -15,7 +15,7 @@ import type {Node} from './types';
 //TODO: Support the comma operator
 //TODO: Support the ternary operator
 
-const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or }) => {
+const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, optional, star, and, or }) => {
 
   /* CONSTANTS */
 
@@ -124,12 +124,14 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or 
   };
 
   const access = ( next: ExplicitRule<Node> ): ExplicitRule<Node> => {
-    return and ( [next, star ( and ([ _, or ([ MemberAccessor, ComputedMemberAccessor ]) ]) )], ( nodes ): Node => {
+    return and ( [next, star ( and ([ _, or ([ MemberAccessor, ComputedMemberAccessor, MemberCall ]) ]) )], ( nodes ): Node => {
       return collapse ( nodes, true, 1, ( n0, n1 ) => {
         if ( is<NodeMemberAccessor> ( n1, 'memberAccessor' ) ) {
           return { type: 'memberAccess', children: [n0, n1.value] };
         } else if ( is<NodeComputedMemberAccessor> ( n1, 'computedMemberAccessor' ) ) {
           return { type: 'computedMemberAccess', children: [n0, n1.children[0]] };
+        } else if ( is<NodeMemberCaller> ( n1, 'memberCaller' ) ) {
+          return { type: 'memberCall', children: [n0, n1.children] };
         } else {
           throw new Error ( 'Failed to parse' );
         }
@@ -172,6 +174,7 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or 
 
   /* ACCESS */
 
+  const MemberCall = and ( ['(', _, optional ([ () => Expression, star ([ ',', () => Expression ]) ]), ')'], ( nodes ): NodeMemberCaller => ({ type: 'memberCaller', children: nodes }) );
   const MemberAccessor = match ( /\.([a-zA-Z$_][a-zA-Z0-9$_]*)/, ( _, value ): NodeMemberAccessor => ({ type: 'memberAccessor', value }) );
   const ComputedMemberAccessor = and ( ['[', () => Expression, ']'], ( nodes ): NodeComputedMemberAccessor => ({ type: 'computedMemberAccessor', children: [nodes[0]] }) );
   const Access = access ( Primary );

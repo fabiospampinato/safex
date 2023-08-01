@@ -15,6 +15,7 @@ This library follows these design goals:
 The following features of JavaScript are supported:
 
 - **Read-only variables**: you can provide arbitrary read-only variables to your expressions.
+- **Restricted function calls**: you can provide arbitrary functions that your expressions are allowed to call.
 - **Property accesses**: `a.b.c`, `a[b][c]`.
 - **Primitive values**: `true`, `false`, `null`, `undefined`, `bigint`, `number`, `string`.
 - **Comparison operators**: `==`, `!=`, `===`, `!==`, `>`, `>=`, `<`, `<=`.
@@ -27,9 +28,9 @@ The following features of JavaScript are instead _not_ supported:
 
 - **Assignments**: no assignment operators are supported, your variables can't be mutated.
 - **Increment/decrement**: no postfix/prefix increment/decrement operators are supported either.
-- **`new` operator**: `new` can be used to execute functions, so it's not supported.
+- **`new` operator**: `new` can be used to execute unintentionally-exposed functions, so it's not supported.
 - **New variables**: safe expressions can't declare new variables.
-- **Function calls**: no explicit function calls can be performed, obviously.
+- **Arbitrary function calls**: no arbitrary function calls can be performed, only functions you explicitly list can be called.
 - **Loops**: not even loops can be created.
 
 ## Security
@@ -52,7 +53,22 @@ Which the no longer safe expressions could then use like this to execute arbitra
 footgun['alert(1)']
 ```
 
-Basically there are a lot of ways to execute a function in JavaScript, even with the allowed language being this restrictive, for example:
+Additionally function calls to explicitly-provided functions are allowed, so providing this context object to your expressions is unsafe:
+
+```js
+{ eval }
+```
+
+Note how a function must be explicitly listed to be callable by the expression:
+
+```js
+// This will throw, "min" was not explicitly provided
+safex.exec ( 'Math.min ( 1, 2 )', { Math } );
+// This is allowed,"min" was explicitly provided
+safex.exec ( 'min ( 1, 2 )', { min: Math.min } );
+```
+
+Basically executing a function in general is unsafe, and there are a lot of ways to execute a function in JavaScript, even with the allowed language being this restrictive, for example:
 
 - Coercing objects or functions to primitives could call `Symbol.toPrimitive`, `toString` and `valueOf` on them.
 - Accessing a property could cause a function call if that property is actually a getter.
@@ -90,11 +106,7 @@ safex.validate ( '( -1 ) ** 2' ); // => true
 safex.validate ( '-1 ** 2' ); // => false
 safex.validate ( 'eval ( "alert(1)" )' ); // => false
 
-// Low-level function to tokenize an expression, invalid expressions could be tokenized successfully too
-
-const tokens = safex.tokenize ( '1 + 2' ); // => [{ type: 'number', value: 1 }, { type: 'addition' }, { type: 'number', value: 2 }]
-
-// Low-level function that checks tokens for validity and returns an AST rather than a list of tokens
+// Low-level function that parse an expression into an AST
 
 const ast = safex.parse ( '1 + 2' ) // => { type: 'root', children: [{ type: 'addition', children: [{ type: 'number', value: 1 }, { type: 'number', value: 2 }] }] }
 ```

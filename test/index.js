@@ -99,6 +99,26 @@ describe ( 'Safex', () => {
 
     });
 
+    it ( 'supports variables', t => {
+
+      t.is ( safex.exec ( 'foo()', { foo: () => 123 } ), 123 );
+      t.is ( safex.exec ( 'foo  (  )  ', { foo: () => 123 } ), 123 );
+      t.is ( safex.exec ( 'foo(1)', { foo: nr => nr + 1 } ), 2 );
+      t.is ( safex.exec ( 'foo(1,"foo")', { foo: (n1, n2) => `${n1 + 1}${n2}`  } ), '2foo' );
+      t.is ( safex.exec ( 'foo(foo(1))', { foo: nr => nr * 2 } ), 4 );
+      t.is ( safex.exec ( 'min(foo, bar)', { foo: 123, bar: 321, min: Math.min } ), 123 );
+
+      // Ensuring only explicitly allowed ones are supported
+
+      t.throws ( () => safex.exec ( 'bar()' ), { message: 'Forbidden function call' } );
+      t.throws ( () => safex.exec ( 'toString()' ), { message: 'Forbidden function call' } );
+      t.throws ( () => safex.exec ( 'foo(bar())', { foo: () => 123 } ), { message: 'Forbidden function call' } );
+      t.throws ( () => safex.exec ( 'max(1, 2)', { foo: () => 123, min: Math.min } ), { message: 'Forbidden function call' } );
+      t.throws ( () => safex.exec ( 'max(1, 2)', { foo: () => 123, Math } ), { message: 'Forbidden function call' } );
+      t.throws ( () => safex.exec ( 'Math.max(1, 2)', { foo: () => 123, Math } ), { message: 'Forbidden function call' } );
+
+    });
+
     it ( 'supports unary operators', t => {
 
       t.is ( safex.exec ( '!true' ), !true );
@@ -334,6 +354,17 @@ describe ( 'Safex', () => {
 
     });
 
+    it ( 'supports function calls', t => {
+
+      t.deepEqual ( safex.parse ( 'foo()' ), { type: 'root', children: [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, []] }] } );
+      t.deepEqual ( safex.parse ( 'foo  (  )  ' ), { type: 'root', children: [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, []] }] } );
+
+      t.deepEqual ( safex.parse ( 'foo(1)' ), { type: 'root', children: [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, [{ type: 'number', value: 1 }]] }] } );
+      t.deepEqual ( safex.parse ( 'foo(1,"foo")' ), { type: 'root', children: [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, [{ type: 'number', value: 1 }, { type: 'string', value: 'foo' }]] }] } );
+      t.deepEqual ( safex.parse ( 'foo(foo())' ), { type: 'root', children: [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, [{ type: 'memberCall', children: [{ type: 'identifier', value: 'foo' }, []] }]] }] } );
+
+    });
+
     it ( 'supports unary operators', t => {
 
       t.deepEqual ( safex.parse ( '!0' ), { type: 'root', children: [{ type: 'logicalNot', children: [{ type: 'number', value: 0 }] }] } );
@@ -509,6 +540,11 @@ describe ( 'Safex', () => {
       t.false ( safex.validate ( 'foo.' ) );
       t.false ( safex.validate ( '.foo' ) );
       t.false ( safex.validate ( 'foo.123' ) );
+
+      t.false ( safex.validate ( 'foo(' ) );
+      t.false ( safex.validate ( 'foo)' ) );
+      t.false ( safex.validate ( 'foo(,)' ) );
+      t.false ( safex.validate ( 'foo(1,)' ) );
 
       t.false ( safex.validate ( '[' ) );
       t.false ( safex.validate ( ']' ) );

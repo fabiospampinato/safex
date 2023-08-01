@@ -5,7 +5,7 @@ import parse from './parse';
 import type {Context} from './types';
 import type {NodeRoot, NodeGroup, NodeIdentifier} from './types';
 import type {NodePrimitiveTrue, NodePrimitiveFalse, NodePrimitiveNull, NodePrimitiveUndefined, NodePrimitiveBigInt, NodePrimitiveNumber, NodePrimitiveString} from './types';
-import type {NodeMemberAccess, NodeComputedMemberAccess} from './types';
+import type {NodeMemberCall, NodeMemberAccess, NodeComputedMemberAccess} from './types';
 import type {NodeUnaryLogicalNot, NodeUnaryBitwiseNot, NodeUnaryPlus, NodeUnaryNegation} from './types';
 import type {NodeBinaryExponentiation, NodeBinaryMultiplication, NodeBinaryDivision, NodeBinaryReminder, NodeBinaryAddition, NodeBinarySubtraction, NodeBinaryBitwiseLeftShift, NodeBinaryBitwiseRightShift, NodeBinaryBitwiseUnsignedRightShift, NodeBinaryLessThan, NodeBinaryLessThanOrEqual, NodeBinaryGreaterThan, NodeBinaryGreaterThanOrEqual, NodeBinaryEquality, NodeBinaryInequality, NodeBinaryStrictEquality, NodeBinaryStrictInequality, NodeBinaryBitwiseAnd, NodeBinaryBitwiseXor, NodeBinaryBitwiseOr, NodeBinaryLogicalAnd, NodeBinaryLogicalOr, NodeBinaryNullishCoalescing} from './types';
 import type {Node} from './types';
@@ -20,6 +20,7 @@ const EVALUATORS = {
   /* IDENTIFIER */
   identifier: ( node: NodeIdentifier, context: Context ) => Object.prototype.hasOwnProperty.call ( context, node.value ) ? context[node.value] : undefined,
   /* ACCESS */
+  memberCall: ( node: NodeMemberCall, context: Context ) => checkCallable ( evaluate ( node.children[0], context ), context )( ...node.children[1].map ( child => evaluate ( child, context ) ) ),
   memberAccess: ( node: NodeMemberAccess, context: Context ) => evaluate ( node.children[0], context )[node.children[1]],
   computedMemberAccess: ( node: NodeComputedMemberAccess, context: Context ) => evaluate ( node.children[0], context )[evaluate ( node.children[1], context )],
   /* PRIMITIVES */
@@ -62,6 +63,22 @@ const EVALUATORS = {
 };
 
 /* HELPERS */
+
+const checkCallable = ( fn: unknown, context: Context ): Function => {
+
+  if ( typeof fn === 'function' ) { //TODO: Maybe optimize this check, it's tricky/sketchy though if the object could be mutated
+
+    for ( const key in context ) {
+
+      if ( context[key] === fn ) return fn;
+
+    }
+
+  }
+
+  throw new Error ( 'Forbidden function call' );
+
+};
 
 const evaluate = ( node: Node, context: Context ): any => {
 
