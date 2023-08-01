@@ -125,8 +125,7 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or 
 
   /* WHITESPACE */
 
-  const _ = match ( /[ \t]*/ );
-  // const _ = match ( [' ', '\t'] ); //TODO
+  const _ = match ([ ' ', '\t' ]);
 
   /* IDENTIFIER */
 
