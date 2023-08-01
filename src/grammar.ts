@@ -52,6 +52,16 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or 
     '??': 'nullishCoalescing'
   };
 
+  const BINARY_OPERATOR_FORBIDDEN_OPERATORS_LEFT = {
+    '**': new Set ([ 'logicalNot', 'bitwiseNot', 'plus', 'negation' ]),
+  };
+
+  const BINARY_OPERATOR_FORBIDDEN_OPERATORS_LEFT_RIGHT = {
+    '??': new Set ([ 'logicalAnd', 'logicalOr' ]),
+    '||': new Set ([ 'nullishCoalescing' ]),
+    '&&': new Set ([ 'nullishCoalescing' ])
+  };
+
   /* HELPERS */
 
   function collapse ( nodes: Node[], ltr: boolean, take: 1, handler: ( n0: Node, n1: Node ) => Node ): Node;
@@ -104,6 +114,10 @@ const Grammar = grammar<Node, ExplicitRule<NodeRoot>> ( ({ match, star, and, or 
       return collapse ( nodes, ltr, 2, ( n0, n1, n2 ) => {
         if ( !is<NodeOperator> ( n1, 'operator' ) ) throw new Error ( 'Failed to parse' );
         const type = BINARY_OPERATOR_TO_TYPE[n1.value];
+        const forbiddenLeft = BINARY_OPERATOR_FORBIDDEN_OPERATORS_LEFT[n1.value];
+        const forbiddenLeftRight = BINARY_OPERATOR_FORBIDDEN_OPERATORS_LEFT_RIGHT[n1.value];
+        if ( forbiddenLeft?.has ( ltr ? n0.type : n2.type ) ) throw new Error ( 'Failed to parse' );
+        if ( forbiddenLeftRight?.has ( n0.type ) || forbiddenLeftRight?.has ( n2.type ) ) throw new Error ( 'Failed to parse' );
         return { type, children: ltr ? [n0, n2] : [n2, n0] };
       });
     });

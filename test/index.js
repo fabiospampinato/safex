@@ -522,21 +522,17 @@ describe ( 'Safex', () => {
 
       t.false ( safex.validate ( 'eval ( "alert(1)" )' ) );
 
-      //TODO: Add checks for the following (very) edge cases:
-      //TODO: ** doesn't want logicalNot/bitwiseNot/plus/negation to its left
-      //TODO: ?? doesn't want logicalAnd/logicalOr to its left/right
+      t.false ( safex.validate ( '0 || null ?? 2' ) );
+      t.false ( safex.validate ( '1 || null ?? 2' ) );
+      t.false ( safex.validate ( '0 && null ?? 2' ) );
+      t.false ( safex.validate ( '1 && null ?? 2' ) );
 
-      // t.false ( safex.validate ( '0 || null ?? 2' ) );
-      // t.false ( safex.validate ( '1 || null ?? 2' ) );
-      // t.false ( safex.validate ( '0 && null ?? 2' ) );
-      // t.false ( safex.validate ( '1 && null ?? 2' ) );
+      t.false ( safex.validate ( '2 ?? 0 || null' ) );
+      t.false ( safex.validate ( '2 ?? 1 || null' ) );
+      t.false ( safex.validate ( '2 ?? 0 && null' ) );
+      t.false ( safex.validate ( '2 ?? 1 && null' ) );
 
-      // t.false ( safex.validate ( '2 ?? 0 || null' ) );
-      // t.false ( safex.validate ( '2 ?? 1 || null' ) );
-      // t.false ( safex.validate ( '2 ?? 0 && null' ) );
-      // t.false ( safex.validate ( '2 ?? 1 && null' ) );
-
-      // t.false ( safex.validate ( '-1 ** 2' ) );
+      t.false ( safex.validate ( '-1 ** 2' ) );
 
     });
 
